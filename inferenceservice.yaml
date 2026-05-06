@@ -1,0 +1,53 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: cajal-paper-generator
+  namespace: default
+  labels:
+    app: cajal
+    version: "9b"
+spec:
+  predictor:
+    minReplicas: 1
+    maxReplicas: 5
+    containerConcurrency: 10
+    timeout: 300
+    model:
+      modelFormat:
+        name: cajal
+      protocolVersion: v1
+      storageUri: gs://p2pclaw-models/cajal-9b-p2pclaw
+      resources:
+        limits:
+          cpu: "4"
+          memory: 16Gi
+          nvidia.com/gpu: "1"
+        requests:
+          cpu: "2"
+          memory: 8Gi
+          nvidia.com/gpu: "1"
+      env:
+        - name: OLLAMA_MODELS
+          value: "/models"
+        - name: CAJAL_SECTION_TOKENS
+          value: "ABSTRACT,INTRO,METHODS,RESULTS,CONCLUSIONS"
+    serviceAccountName: kserve-cajal-sa
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cajal-config
+  namespace: default
+data:
+  system_prompt: |
+    You are CAJAL, a scientific paper generation assistant.
+    Use section tokens: [ABSTRACT], [INTRO], [METHODS], [RESULTS], [CONCLUSIONS]
+  max_tokens: "4096"
+  temperature: "0.7"
+  tribunal_enabled: "true"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kserve-cajal-sa
+  namespace: default
